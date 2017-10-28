@@ -5,8 +5,8 @@ from stop_words import get_stop_words
 # tokens= nltk.word_tokenize(sentence)
 #
 # print(tokens)
-path="20news-bydate/20news-bydate-train/comp.graphics/37261"
-doc=open(path,'r')
+path="../deeta/20news-bydate-train/comp.graphics/38291"
+doc=open(path,'r', encoding='latin_1')
 def genTokens(doc):
    #delete useless lines
    docLineList=doc.readlines()
@@ -33,3 +33,4 @@ def genTokens(doc):
    tokens=[i for i in tokens if i not in stop_words]
 
    return tokens
+print (genTokens(doc))
