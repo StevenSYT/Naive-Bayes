@@ -20,9 +20,16 @@ class NB_Classifier:
       estimates = list(map(lambda x: x.logAPosterioriEstimate(docName), self.clasLists))
       return clasLists[np.argmax(estimates)].name
 
+   #test on a directory containing subdirectories that contain documents of a single class,
+   #return accuracy over all docs tested.
+   #rigorously test this, I feel confident I made a mistake, and it could be hard
+   #to detect.
    def testOnDir(self, aDir):
       pathes = Path(aDir).iterdir()
-
+      aFunc = lambda docList, clas: list(map(lambda x: int(self.classifyDoc(x) == clas), docList))
+      testSize = sum(map(lambda x: len(x.iterdir()), pathes))
+      accuracy = sum(map(lambda x: aFunc(x.iterdir(),str(y.parts[-1])), pathes)) / testSize
+      return accuracy
 class Clas:
    def __init__(self, naem, clasPath=None):
       #eh?
@@ -44,7 +51,7 @@ class Clas:
       if pathe.is_dir():
         for x in pathe.iterdir():
            if x.is_file():
-              self.train(genTokens(x))
+              self.train(genTokens(str(x)))
               self.N_docs += 1
 
    def train(self, trainingList):
@@ -53,7 +60,7 @@ class Clas:
          self.totalWordCount+=1
 
    def logAPosterioriEstimate(self, doc):
-      wordList = genTokens(doc)
+      wordList = genTokens(str(doc))
       #adds unseen words to the list of token counts.
       for word in wordList:
          self.tokenCounts[word]+=0
