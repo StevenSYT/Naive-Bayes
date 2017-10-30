@@ -2,6 +2,7 @@ import preProcess as pp
 from pathlib import Path
 import numpy as np
 import os
+import math as m
 
 class NB_Classifier:
    def __init__(self):
@@ -17,8 +18,9 @@ class NB_Classifier:
          x.prior = x.N_docs/self.totalDocs
 
    def classifyDoc(self, docName):
-      estimates = list(map(lambda x: x.logAPosterioriEstimate(docName), self.clasLists))
-      return clasLists[np.argmax(estimates)].name
+      wordList = pp.genTokens(str(docName))
+      estimates = list(map(lambda x: x.logAPosterioriEstimate(wordList), self.clasLists))
+      return self.clasLists[np.argmax(estimates)].name
 
    #test on a directory containing subdirectories that contain documents of a single class,
    #return accuracy over all docs tested.
@@ -26,10 +28,24 @@ class NB_Classifier:
    #to detect.
    def testOnDir(self, aDir):
       pathes = Path(aDir).iterdir()
-      aFunc = lambda docList, clas: list(map(lambda x: int(self.classifyDoc(str(x)) == clas), docList))
+      pathes2 = Path(aDir).iterdir()
+      def aFunc(docList, clas):
+         acc=0
+         for doc in docList:
+            classifee = self.classifyDoc(str(doc))
+            arf = int(classifee == clas)
+            acc+=arf
+            if arf==0:
+               print("WRONG! on " + str(doc) + " classifier guessed " + classifee)
+         return acc
+      #i prefer lambdas, though.
+      #aFunc = lambda docList, clas: sum(map(lambda x: int(self.classifyDoc(str(x)) == clas), docList))
       countFiles = lambda path: list(filter(lambda x: x.is_file(), path.iterdir()))
       testSize = sum(map(lambda x: len(countFiles(x)), pathes))
-      accuracy = sum(map(lambda x: aFunc(x.iterdir(),str(y.parts[-1])), pathes)) / testSize
+      accuracy = sum(map(lambda x: aFunc(x.iterdir(),str(x.parts[-1])), pathes2)) / testSize
+      #count = sum(map(lambda x: aFunc(x.iterdir(),str(x.parts[-1])), pathes2))
+      print(testSize)
+      #print(count)
       return accuracy
 
 class Clas:
@@ -65,15 +81,14 @@ class Clas:
             self.tokenCounts[token]=1
          self.totalWordCount+=1
 
-   def logAPosterioriEstimate(self, doc):
-      wordList = pp.genTokens(str(doc))
-      #adds unseen words to the list of token counts.
+   def logAPosterioriEstimate(self, wordList):
+            #adds unseen words to the list of token counts.
       for word in wordList:
          try:
             self.tokenCounts[word]
          except:
             self.tokenCounts[word]=0
-      return log(self.prior)+sum(map(lambda x: log(laplace(self.tokenCounts[x], self.totalWordCount, 1, len(self.tokenCounts)), wordList)))
+      return m.log(self.prior)+sum(map(lambda x: m.log(laplace(self.tokenCounts[x], self.totalWordCount, 1, len(self.tokenCounts))), wordList))
 
    def printCounts(self):
      print()
