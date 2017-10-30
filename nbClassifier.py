@@ -4,17 +4,17 @@ import numpy as np
 import os
 
 class NB_Classifier:
-   def __init__(self, trainPath, testPath):
+   def __init__(self):
       self.totalDocs=0
       self.clasLists=[]
 
    #needs to store the names of the classes in the clasList
    def trainOnDir(self, aDir):
       pathes = Path(aDir).iterdir()
-      self.clasLists = list(map(lambda x: Clas(x), pathes))
+      self.clasLists = list(map(lambda x: Clas(x.parts[-1], x), pathes))
       self.totalDocs=sum(map(lambda x: x.N_docs, self.clasLists))
-      for x in clasLists:
-         x.prior = x.N_docs/totalDocs
+      for x in self.clasLists:
+         x.prior = x.N_docs/self.totalDocs
 
    def classifyDoc(self, docName):
       estimates = list(map(lambda x: x.logAPosterioriEstimate(docName), self.clasLists))
@@ -26,10 +26,12 @@ class NB_Classifier:
    #to detect.
    def testOnDir(self, aDir):
       pathes = Path(aDir).iterdir()
-      aFunc = lambda docList, clas: list(map(lambda x: int(self.classifyDoc(x) == clas), docList))
-      testSize = sum(map(lambda x: len(x.iterdir()), pathes))
+      aFunc = lambda docList, clas: list(map(lambda x: int(self.classifyDoc(str(x)) == clas), docList))
+      countFiles = lambda path: list(filter(lambda x: x.is_file(), path.iterdir()))
+      testSize = sum(map(lambda x: len(countFiles(x)), pathes))
       accuracy = sum(map(lambda x: aFunc(x.iterdir(),str(y.parts[-1])), pathes)) / testSize
       return accuracy
+
 class Clas:
    def __init__(self, naem, clasPath=None):
       #eh?
@@ -41,7 +43,7 @@ class Clas:
       #total number of seen words in the data set does not change after training period.
       self.totalWordCount=0
       if clasPath != None:
-         trainFromCorpus(clasPath)
+         self.trainFromCorpus(clasPath)
    class Doc:
       def __init__(self):
          self.tokens=[]
@@ -51,21 +53,32 @@ class Clas:
       if pathe.is_dir():
         for x in pathe.iterdir():
            if x.is_file():
-              self.train(genTokens(str(x)))
+              self.train(pp.genTokens(str(x)))
               self.N_docs += 1
 
    def train(self, trainingList):
       for token in trainingList:
-         self.tokenCount[token]+=1
+         try:
+            self.tokenCounts[token]+=1
+         except KeyError:
+            print("class " + self.name + " adding " + token + " to my vocab")
+            self.tokenCounts[token]=1
          self.totalWordCount+=1
 
    def logAPosterioriEstimate(self, doc):
-      wordList = genTokens(str(doc))
+      wordList = pp.genTokens(str(doc))
       #adds unseen words to the list of token counts.
       for word in wordList:
-         self.tokenCounts[word]+=0
-      return log(self.prior)+sum(map(lambda x: log(laplace(self.tokenCounts[x], self.totalWordCount, 1, len(self.tokenCounts)), wordList))
+         try:
+            self.tokenCounts[word]
+         except:
+            self.tokenCounts[word]=0
+      return log(self.prior)+sum(map(lambda x: log(laplace(self.tokenCounts[x], self.totalWordCount, 1, len(self.tokenCounts)), wordList)))
 
+   def printCounts(self):
+     print()
+     print(self.tokenCounts) 
+     print()
 # directory = os.fsencode("20news-bydate/20news-bydate-train/comp.graphics")
 # for file in os.listdir(directory):
 def laplace(x, N, pseudocount, newVocabSize):
