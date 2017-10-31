@@ -3,6 +3,7 @@ from pathlib import Path
 import numpy as np
 import os
 import math as m
+import sys
 
 class NB_Classifier:
    def __init__(self):
@@ -20,15 +21,19 @@ class NB_Classifier:
    def classifyDoc(self, docName):
       wordList = pp.genTokens(str(docName))
       estimates = list(map(lambda x: x.logAPosterioriEstimate(wordList), self.clasLists))
-      return self.clasLists[np.argmax(estimates)].name
+      #list of indices classes which are most likely
+      maxList = np.argwhere(estimates == np.amax(estimates)).flatten().tolist()
+      priorList = list(map(lambda x: self.clasLists[x].prior, maxList))
+      return self.clasLists[maxList[np.argmax(priorList)]].name
 
    #test on a directory containing subdirectories that contain documents of a single class,
    #return accuracy over all docs tested.
    #rigorously test this, I feel confident I made a mistake, and it could be hard
    #to detect.
    def testOnDir(self, aDir):
-      pathes = Path(aDir).iterdir()
-      pathes2 = Path(aDir).iterdir()
+      p=Path(aDir)
+      pathes = [direct for direct in p.iterdir() if direct.is_dir()]
+      pathes2 = pathes
       def aFunc(docList, clas):
          acc=0
          for doc in docList:
@@ -46,6 +51,7 @@ class NB_Classifier:
       #count = sum(map(lambda x: aFunc(x.iterdir(),str(x.parts[-1])), pathes2))
       print(testSize)
       #print(count)
+      print(accuracy)
       return accuracy
 
 class Clas:
@@ -92,9 +98,13 @@ class Clas:
 
    def printCounts(self):
      print()
-     print(self.tokenCounts) 
+     print(self.tokenCounts)
      print()
 # directory = os.fsencode("20news-bydate/20news-bydate-train/comp.graphics")
 # for file in os.listdir(directory):
 def laplace(x, N, pseudocount, newVocabSize):
    return (x+pseudocount)/(N+pseudocount*newVocabSize)
+
+nbClassi=NB_Classifier()
+nbClassi.trainOnDir(sys.argv[1])
+nbClassi.testOnDir(sys.argv[2])
